@@ -1,12 +1,6 @@
-#ifdef _CH_
-#pragma package <opencv>
-#endif
-
-#ifndef _EiC
 #include "cv.h"
 #include "ml.h"
 #include "highgui.h"
-#endif
 
 #include <iostream.h>
 #include <fstream.h>
@@ -18,17 +12,137 @@ int max_k = 32;
 int size = 28;
 CvMat* trainClasses = cvCreateMat(train_samples * num_classes, 1, CV_32FC1);
 CvMat* trainData = cvCreateMat(train_samples * num_classes, 2, CV_32FC1);
-CvKNearest knn;
+
+/* 
+ * This function takes an image and to pointers to ints and sets
+ * the ints equal to the minimum and maximum x-coordinates of the actual
+ * image
+ */
+void findX(IplImage* imgSrc,int* min, int* max){
+    int i;
+    int minFound=0;
+    CvMat data;
+    CvScalar maxVal=cvRealScalar(imgSrc->width * 255);
+    CvScalar val=cvRealScalar(0);
+
+   /*
+    * For each col sum, if sum < width*255 then we find the min
+    * then continue to end to search the max, if sum< width*255 
+    * then is new max
+    */
+    for (i=0; i< imgSrc->width; i++){
+        cvGetCol(imgSrc, &data, i);
+        val= cvSum(&data);
+        if(val.val[0] < maxVal.val[0]){
+            *max= i;
+            if(!minFound){
+                *min= i;
+                minFound= 1;
+            }
+        }
+    }
+}
+
+
+/* 
+ * This function takes an image and to pointers to ints and sets
+ * the ints equal to the minimum and maximum x-coordinates of the actual
+ * image
+ */
+void findY(IplImage* imgSrc,int* min, int* max){
+    int i;
+    int minFound=0;
+    CvMat data;
+    CvScalar maxVal=cvRealScalar(imgSrc->width * 255);
+    CvScalar val=cvRealScalar(0);
+
+   /*
+    * For each col sum, if sum < width*255 then we find the min
+    * then continue to end to search the max, if sum< width*255 
+    * then is new max
+    */
+    for (i=0; i< imgSrc->height; i++){
+        cvGetRow(imgSrc, &data, i);
+        val= cvSum(&data);
+        if(val.val[0] < maxVal.val[0]){
+            *max=i;
+            if(!minFound){
+                *min= i;
+                minFound= 1;
+            }
+        }
+    }
+}
+
+
+/*
+ * This function takes an image and finds returns a rectangle that contains
+ * the actual image after cropping the blank white space.
+ */
+CvRect findBB(IplImage* imgSrc){
+    CvRect aux;
+    int xmin, xmax, ymin, ymax;
+    xmin=xmax=ymin=ymax=0;
+ 
+    findX(imgSrc, &xmin, &xmax);
+    findY(imgSrc, &ymin, &ymax);
+ 
+    aux=cvRect(xmin, ymin, xmax-xmin, ymax-ymin);
+ 
+    //printf("BB: %d,%d - %d,%d\n", aux.x, aux.y, aux.width, aux.height);
+ 
+    return aux;
+ 
+}
+
+
+/*
+ * This function takes an image and the width and height we want to scale
+ * it to, then crops the blank white space and scales the actual image
+ * to those parameters.
+ */
+IplImage preprocessing(IplImage* imgSrc, int new_width, int new_height){
+    IplImage* result;
+    IplImage* scaledResult;
+ 
+    CvMat data;
+    CvMat dataA;
+    CvRect bb; //bounding box
+    CvRect bba; //boundinb box maintain aspect ratio
+ 
+    //Find bounding box
+    bb=findBB(imgSrc);
+ 
+   /*
+    * Get bounding box data and no with aspect ratio, 
+    * the x and y can be corrupted
+    */
+    cvGetSubRect(imgSrc, &data, cvRect(bb.x, bb.y, bb.width, bb.height));
+   /* 
+    * Create image with this data with width and height with aspect ratio 1
+    * then we get highest size betwen width and height of our bounding box
+    */
+    int size=(bb.width>bb.height)?bb.width:bb.height;
+    result=cvCreateImage( cvSize( size, size ), 8, 1 );
+    cvSet(result,CV_RGB(255,255,255),NULL);
+    //Copy de data in center of image
+    int x=(int)floor((float)(size-bb.width)/2.0f);
+    int y=(int)floor((float)(size-bb.height)/2.0f);
+    cvGetSubRect(result, &dataA, cvRect(x,y,bb.width, bb.height));
+    cvCopy(&data, &dataA, NULL);
+    //Scale result
+    scaledResult=cvCreateImage( cvSize( new_width, new_height ), 8, 1 );
+    cvResize(result, scaledResult, CV_INTER_NN);
+ 
+    //Return processed data
+    return *scaledResult;
+}
 
 // I used image files from http://cis.jhu.edu/~sachin/digit/digit.html. There 
 // are ten files each containing 1000 28x28 sample images. Each pixel value is 
 // stored as an unsigned byte and can range from 0 to 255. The images are 
 // derived from the MNIST database.
-
-IplImage preprocessing(IplImage* imgSrc, int new_width, int new_height) {
-     return *imgSrc;
-}
-
+//
 // This function extracts the pixel data from the files, processes the images 
 // and stores the images in the data matrices.
 void getData() {
@@ -101,7 +215,7 @@ void getData() {
 
 // Takes an image file and uses CvKNearest.find_nearest to convert the number 
 // in the image into a float.
-float classify(IplImage* img) {
+float classify(IplImage* img, CvKNearest* knn) {
       IplImage processed;
       CvMat data;
       CvMat* nearest_neighbors = cvCreateMat(1, max_k, CV_32FC1);
@@ -117,17 +231,19 @@ float classify(IplImage* img) {
       // Moves rectange from source into data
       cvGetSubRect(floatImage, &data, cvRect(0, 0, size, size));
 
-      CvMat row_header, *row1;
-      row1 = cvReshape(&data, &row_header, 0, 1);
+      //printf("data rows: %i, data cols: %i\n", &data->rows, &data->cols);
+
+      CvMat row_header, *row1, *row2;
+      row1 = cvReshape(&data, &row_header, 0, (28*28/2));
       
       // Get the float corresponding to this image.
-      result = knn.find_nearest(row1, max_k, 0, 0, nearest_neighbors, 0);
+      result = knn->find_nearest(row1, max_k, 0, 0, 0, 0);
       return result;
 }
 
 // Runs the OCR on the test data (last 500 images of each data file) and prints 
 // out the percentage of incorrect classifications.
-void test() {
+void test(CvKNearest* knn) {
      int x, y, i, j, errors;
      float result, errorPercent;
      char filename [50];
@@ -159,7 +275,7 @@ void test() {
                  // Create a new image of size 28x28. Each pixel is 8 bits 
                  // with one channel.
                  source = cvCreateImage(cvSize(size, size), IPL_DEPTH_8U,1);
-     
+                 
                  for(x = 0; x < size; x++)
                  {
                        for(y = 0; y < size; y++)
@@ -178,8 +294,9 @@ void test() {
                  // Process the image
                  processed = preprocessing(source, size, size);
                  
-                 result = classify(&processed);
+                 result = classify(&processed, knn);
                  
+                 printf("Reading the %ith image in this file, classified as: %i\n", j, (int)result);
                  if((int)result != i)
                        errors++;
            }
@@ -190,6 +307,6 @@ void test() {
       
 int main( int argc, char** argv ) {
     getData();
-    knn(trainData, trainClasses, 0, false, max_k);
-    test();
+    CvKNearest* knn = new CvKNearest(trainData, trainClasses, 0, false, max_k);
+    test(knn);
 }
