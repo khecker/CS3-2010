@@ -241,6 +241,7 @@ void getData() {
      }
 }
 
+/*
 float find_nearest(CvMat* img, int max_k) {
       float neighbors[max_k][2];
       float result;
@@ -293,6 +294,7 @@ float find_nearest(CvMat* img, int max_k) {
       result = top/bottom;
       return result;
 }
+*/
 
 // Takes an image file and uses CvKNearest.find_nearest to convert the number 
 // in the image into a float.
