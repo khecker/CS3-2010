@@ -98,6 +98,41 @@ CvRect findBB(IplImage* imgSrc){
  
 }
 
+/*
+ * This function takes an image and the width and height and computes an
+ * average value for the darkness of each pixel then binarizes the image
+ */
+IplImage binarize(IplImage* imgSrc, int new_width, int new_height) {
+	int x, y;
+	int average = 0;
+	unsigned char pixel;
+	
+	/* Get the sum of all the pixel values */
+	for (x=0; x<new_width, x++) {
+		for (y=0, y<new_height, y++) {
+			pixel = processed.imageData[size*x + y];
+			average += (int) pixel;
+		}
+	}
+	
+	/* average them */
+	average = average / (new_width * new_height);
+	
+	/* Then compare to each pixel */
+	for (x=0; x<new_width, x++) {
+		for (y=0, y<new_height, y++) {
+			pixel = processed.imageData[size*x + y];
+			if (average > (int) pixel) {
+				/* If lighter than the average, set to 0(white) */
+				pixel = 0;
+			} else {
+				/* If darker than the average set to 255(black) */
+				pixel = 255;
+			}
+		}
+	}
+}
+
 
 /*
  * This function takes an image and the width and height we want to scale
@@ -144,6 +179,11 @@ IplImage preprocessing(IplImage* imgSrc, int new_width, int new_height){
     scaledResult = cvCreateImage( cvSize( new_width, new_height ), 8, 1 );
     cvResize(result, scaledResult, CV_INTER_NN);
  
+	/*
+	// We might want to binarize the result
+	binarize(scaledResult, new_width, new_height);
+	 */
+	
     //Return processed data
     return *scaledResult;
 }
