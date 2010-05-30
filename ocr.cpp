@@ -206,7 +206,7 @@ void getData() {
                  // Process the image
                  processed = preprocessing(source, size, size);
                  
-                 
+                 /*
                  // Testing the preprocessing code.
                  for(x = 0; x < size; x++)
                  {
@@ -222,7 +222,7 @@ void getData() {
                  }
                  
                  while(1);
-                 
+                 */
                  
                  // Convert our 8-bit image into a 32-float image.
                  IplImage* floatImage = cvCreateImage(cvSize(size, size), 
