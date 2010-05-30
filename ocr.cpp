@@ -1,6 +1,8 @@
 #include "cv.h"
 #include "ml.h"
 #include "highgui.h"
+#include "cvaux.h"
+#include "cxcore.h"
 
 #include <iostream.h>
 #include <fstream.h>
@@ -15,30 +17,30 @@ CvMat* trainClasses = cvCreateMat(train_samples * num_classes, 1, CV_32FC1);
 CvMat* trainData = cvCreateMat(train_samples * num_classes, size*size, CV_32FC1);
 
 /* 
- * This function takes an image and to pointers to ints and sets
+ * This function takes an image and two pointers to ints and sets
  * the ints equal to the minimum and maximum x-coordinates of the actual
  * image
  */
 void findX(IplImage* imgSrc,int* min, int* max){
     int i;
-    int minFound=0;
+    int minFound = 0;
     CvMat data;
-    CvScalar maxVal=cvRealScalar(imgSrc->width * 255);
-    CvScalar val=cvRealScalar(0);
+    CvScalar maxVal = cvRealScalar(imgSrc->width * 255);
+    CvScalar val = cvRealScalar(0);
 
    /*
     * For each col sum, if sum < width*255 then we find the min
     * then continue to end to search the max, if sum< width*255 
-    * then is new max
+    * then it is the new max
     */
     for (i=0; i< imgSrc->width; i++){
         cvGetCol(imgSrc, &data, i);
-        val= cvSum(&data);
+        val = cvSum(&data);
         if(val.val[0] < maxVal.val[0]){
-            *max= i;
+            *max = i;
             if(!minFound){
-                *min= i;
-                minFound= 1;
+                *min = i;
+                minFound = 1;
             }
         }
     }
@@ -46,30 +48,30 @@ void findX(IplImage* imgSrc,int* min, int* max){
 
 
 /* 
- * This function takes an image and to pointers to ints and sets
+ * This function takes an image and two pointers to ints and sets
  * the ints equal to the minimum and maximum x-coordinates of the actual
  * image
  */
 void findY(IplImage* imgSrc,int* min, int* max){
     int i;
-    int minFound=0;
+    int minFound = 0;
     CvMat data;
-    CvScalar maxVal=cvRealScalar(imgSrc->width * 255);
-    CvScalar val=cvRealScalar(0);
+    CvScalar maxVal = cvRealScalar(imgSrc->width * 255);
+    CvScalar val = cvRealScalar(0);
 
    /*
     * For each col sum, if sum < width*255 then we find the min
     * then continue to end to search the max, if sum< width*255 
-    * then is new max
+    * then it is the new max
     */
     for (i=0; i< imgSrc->height; i++){
         cvGetRow(imgSrc, &data, i);
-        val= cvSum(&data);
+        val = cvSum(&data);
         if(val.val[0] < maxVal.val[0]){
-            *max=i;
+            *max = i;
             if(!minFound){
-                *min= i;
-                minFound= 1;
+                *min = i;
+                minFound = 1;
             }
         }
     }
@@ -111,8 +113,15 @@ IplImage preprocessing(IplImage* imgSrc, int new_width, int new_height){
     CvRect bb; //bounding box
     CvRect bba; //boundinb box maintain aspect ratio
  
+	/*
+	 * Gaussian blur the function on a 3x3 window; this should reduce noise
+     * as blurring the image would reduce the impact of random pixels of the 
+     * wrong color. 
+	 */
+	cvSmooth(imgSrc, imgSrc, CV_GAUSSIAN, 3, 3);
+	
     //Find bounding box
-    bb=findBB(imgSrc);
+    bb = findBB(imgSrc);
  
    /*
     * Get bounding box data and no with aspect ratio, 
@@ -123,16 +132,16 @@ IplImage preprocessing(IplImage* imgSrc, int new_width, int new_height){
     * Create image with this data with width and height with aspect ratio 1
     * then we get highest size betwen width and height of our bounding box
     */
-    int size=(bb.width>bb.height)?bb.width:bb.height;
-    result=cvCreateImage( cvSize( size, size ), 8, 1 );
+    int size = (bb.width>bb.height)?bb.width:bb.height;
+    result = cvCreateImage( cvSize( size, size ), 8, 1 );
     cvSet(result,CV_RGB(255,255,255),NULL);
     //Copy de data in center of image
-    int x=(int)floor((float)(size-bb.width)/2.0f);
-    int y=(int)floor((float)(size-bb.height)/2.0f);
+    int x = (int)floor((float)(size-bb.width)/2.0f);
+    int y = (int)floor((float)(size-bb.height)/2.0f);
     cvGetSubRect(result, &dataA, cvRect(x,y,bb.width, bb.height));
     cvCopy(&data, &dataA, NULL);
     //Scale result
-    scaledResult=cvCreateImage( cvSize( new_width, new_height ), 8, 1 );
+    scaledResult = cvCreateImage( cvSize( new_width, new_height ), 8, 1 );
     cvResize(result, scaledResult, CV_INTER_NN);
  
     //Return processed data
@@ -149,7 +158,8 @@ IplImage preprocessing(IplImage* imgSrc, int new_width, int new_height){
 void getData() {
      int x, y, i, j;
      char filename [50];
-     unsigned char pixel; 
+     unsigned char pixel;
+     unsigned char pixel2;
      IplImage* source;
      IplImage processed;
      CvMat row, data;
@@ -196,7 +206,7 @@ void getData() {
                  // Process the image
                  processed = preprocessing(source, size, size);
                  
-                 /*
+                 
                  // Testing the preprocessing code.
                  for(x = 0; x < size; x++)
                  {
@@ -212,7 +222,7 @@ void getData() {
                  }
                  
                  while(1);
-                 */
+                 
                  
                  // Convert our 8-bit image into a 32-float image.
                  IplImage* floatImage = cvCreateImage(cvSize(size, size), 
