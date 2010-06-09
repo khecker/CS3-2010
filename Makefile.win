@@ -5,8 +5,8 @@ CPP  = g++.exe
 CC   = gcc.exe
 WINDRES = windres.exe
 RES  = 
-OBJ  = ocr.o ../ml/src/mlknearest.o ../ml/src/ml_inner_functions.o $(RES)
-LINKOBJ  = ocr.o ../ml/src/mlknearest.o ../ml/src/ml_inner_functions.o $(RES)
+OBJ  = ../ml/src/ml_inner_functions.o ../ml/src/mlknearest.o ocr.o $(RES)
+LINKOBJ  = ../ml/src/ml_inner_functions.o ../ml/src/mlknearest.o ocr.o $(RES)
 LIBS =  -L"C:/Dev-Cpp/lib" -L"C:/Program Files/OpenCV/lib" -L"C:/Program Files/OpenCV/otherlibs/highgui" -L"C:/Program Files/OpenCV/lib" -lcxcore -lcv -lcvaux -lhighgui -lml -lcvcam  
 INCS =  -I"C:/Dev-Cpp/include"  -I"C:/Program Files/OpenCV/cv/include"  -I"C:/Program Files/OpenCV/cvaux/include"  -I"C:/Program Files/OpenCV/cxcore/include"  -I"C:/Program Files/OpenCV/ml/include"  -I"C:/Program Files/OpenCV/otherlibs/highgui"  -I"C:/Program Files/OpenCV/otherlibs/cvcam/include" 
 CXXINCS =  -I"C:/Dev-Cpp/lib/gcc/mingw32/3.4.2/include"  -I"C:/Dev-Cpp/include/c++/3.4.2/backward"  -I"C:/Dev-Cpp/include/c++/3.4.2/mingw32"  -I"C:/Dev-Cpp/include/c++/3.4.2"  -I"C:/Dev-Cpp/include"  -I"C:/Program Files/OpenCV/cv/include"  -I"C:/Program Files/OpenCV/cvaux/include"  -I"C:/Program Files/OpenCV/cxcore/include"  -I"C:/Program Files/OpenCV/ml/include"  -I"C:/Program Files/OpenCV/otherlibs/highgui"  -I"C:/Program Files/OpenCV/otherlibs/cvcam/include" 
@@ -26,11 +26,11 @@ clean: clean-custom
 $(BIN): $(OBJ)
 	$(CPP) $(LINKOBJ) -o "OCR.exe" $(LIBS)
 
-ocr.o: ocr.cpp
-	$(CPP) -c ocr.cpp -o ocr.o $(CXXFLAGS)
+../ml/src/ml_inner_functions.o: ../ml/src/ml_inner_functions.cpp
+	$(CPP) -c ../ml/src/ml_inner_functions.cpp -o ../ml/src/ml_inner_functions.o $(CXXFLAGS)
 
 ../ml/src/mlknearest.o: ../ml/src/mlknearest.cpp
 	$(CPP) -c ../ml/src/mlknearest.cpp -o ../ml/src/mlknearest.o $(CXXFLAGS)
 
-../ml/src/ml_inner_functions.o: ../ml/src/ml_inner_functions.cpp
-	$(CPP) -c ../ml/src/ml_inner_functions.cpp -o ../ml/src/ml_inner_functions.o $(CXXFLAGS)
+ocr.o: ocr.cpp
+	$(CPP) -c ocr.cpp -o ocr.o $(CXXFLAGS)
